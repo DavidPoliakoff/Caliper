@@ -1,0 +1,1 @@
+/usr/global/tools/clang/chaos_5_x86_64_ib/clang-cuda-beta-2017-03-03/rawbin/clang++ -cc1 -load ../build/plugin_print_funcnames.so -plugin print-fns $1

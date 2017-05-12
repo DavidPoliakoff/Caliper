@@ -1,0 +1,52 @@
+LLVM & Clang library usage samples
+==================================
+
+This repo contains a codebase with
+
+1) Code samples showing how to build Clang tools
+2) A RAJA compiler plugin intended to detect errors in RAJA usage.
+
+
+Build stub
+--------
+1) use clang-cuda-beta
+2) make plugins
+
+This will create a file, build/plugin_raja_checker.so
+
+
+How to use the compiler
+-----------------------
+
+Place plugin_raja_checker.so in your LD_LIBRARY_PATH.
+
+Run clang as you normally would, with the following flags added
+
+-fplugin=plugin_raja_checker.so -Xclang -plugin-arg-lambda-checker -Xclang NOMATCH 
+
+This will add the compiler plugin to your build process
+
+
+To modify
+-------------
+
+src_clang/raja_checker.cpp
+    The current plugin
+
+src_clang/infrastructure/*
+  The scaffolding built up around the plugin for use in developing other plugins
+
+Running tests and tools
+-----------------------
+
+./runcuda
+
+Intent
+-----------------------
+
+This is a suite of Clang extensions to improve people's ability to use RAJA
+
+Attribution
+-----------------------
+
+Framework originally developed by Eli Bendersky here (https://github.com/eliben/llvm-clang-samples)
