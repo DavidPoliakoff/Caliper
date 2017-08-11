@@ -39,6 +39,7 @@ option(WITH_MPI       "Enable MPI" TRUE)
 option(WITH_SAMPLER   "Enable sampler (x86 Linux only)" TRUE)
 option(WITH_DYNINST   "Enable dyninst (for symbollookup service" TRUE)
 option(WITH_GOTCHA    "Enable GOTCHA wrapping" TRUE)
+option(WITH_DISSECTIO "Enable dissectio I/O tracing" TRUE)
 
 # configure testing explicitly rather than with include(CTest) - avoids some clutter
 option(BUILD_TESTING  "Build continuous integration app and unit tests" ON)
@@ -79,6 +80,10 @@ if(WITH_CUPTI)
     set(CALIPER_HAVE_CUPTI TRUE)
     list(APPEND CALIPER_EXTERNAL_LIBS ${CUPTI_LIBRARY})
   endif()
+endif()
+
+if(WITH_DISSECTIO)
+  set(CALIPER_HAVE_DISSECTIO TRUE)
 endif()
 
 if(CALIPER_HAVE_TAU)

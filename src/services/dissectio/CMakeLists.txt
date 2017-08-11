@@ -1,21 +1,32 @@
+MESSAGE("INCLUDING ${GOTCHA_INCLUDE_DIR}")
+if(GOTCHA_INCLUDE_DIR)
+  include_directories(${GOTCHA_INCLUDE_DIR})
+else()
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/ext/gotcha/gotcha-download/gotcha-src/include)
+  set(${CMAKE_CURRENT_BINARY_DIR}/ext/gotcha/gotcha-download/gotcha-src/include)
+endif()
+
 set(CALIPER_DISSECTIO_SOURCES
   Dissectio.cpp)
 
+
 if(CALIPER_DISSECTIO_ALL_SILO)
-  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_all_silo.h"
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_all_silo.c")
+  set_source_files_properties("gotcha_all_silo.c" PROPERTIES LANGUAGE CXX)
 endif()
 if(CALIPER_DISSECTIO_HDF5)
-  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_hdf5.h"
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_hdf5.c")
+  set_source_files_properties("gotcha_hdf5.c" PROPERTIES LANGUAGE CXX)
 endif()
 if(CALIPER_DISSECTIO_MPI_IO)
-  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_mpi_io.h"
-endif()
-if(CALIPER_DISSECTIO_POSIX)
-  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_posix.h"
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_mpi_io.c")
+  set_source_files_properties("gotcha_mpi_io.c" PROPERTIES LANGUAGE CXX)
 endif()
 if(CALIPER_DISSECTIO_SILO)
-  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_silo.h"
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_silo.c")
+  set_source_files_properties("gotcha_silo.c" PROPERTIES LANGUAGE CXX)
 endif()
+list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_posix.cpp")
 
 add_service_sources(${CALIPER_DISSECTIO_SOURCES})
 add_caliper_service("dissectio CALIPER_HAVE_DISSECTIO")

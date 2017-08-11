@@ -53,7 +53,7 @@
 #include <iterator>
 #include <string>
 #include <vector>
-
+#include <gotcha/gotcha.h>
 #ifdef CALIPER_HAVE_SILO
 #include "gotcha_all_silo.h"
 #include "gotcha_silo.h"

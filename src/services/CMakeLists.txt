@@ -1,5 +1,6 @@
 # A macro to include service module source files in the caliper runtime lib
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${GOTCHA_INCLUDE_DIR})
 
 macro(add_service_sources)
   file(RELATIVE_PATH _relpath "${CMAKE_SOURCE_DIR}/src/services" "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -37,6 +38,9 @@ add_subdirectory(common)
 add_subdirectory(aggregate)
 if (CALIPER_HAVE_LIBUNWIND)
   add_subdirectory(callpath)
+endif()
+if(CALIPER_HAVE_DISSECTIO)
+  add_subdirectory(dissectio)
 endif()
 if (CALIPER_HAVE_PAPI)
   add_subdirectory(papi)
