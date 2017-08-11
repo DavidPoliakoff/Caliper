@@ -1,0 +1,21 @@
+set(CALIPER_DISSECTIO_SOURCES
+  Dissectio.cpp)
+
+if(CALIPER_DISSECTIO_ALL_SILO)
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_all_silo.h"
+endif()
+if(CALIPER_DISSECTIO_HDF5)
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_hdf5.h"
+endif()
+if(CALIPER_DISSECTIO_MPI_IO)
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_mpi_io.h"
+endif()
+if(CALIPER_DISSECTIO_POSIX)
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_posix.h"
+endif()
+if(CALIPER_DISSECTIO_SILO)
+  list(APPEND CALIPER_DISSECTIO_SOURCES "gotcha_silo.h"
+endif()
+
+add_service_sources(${CALIPER_DISSECTIO_SOURCES})
+add_caliper_service("dissectio CALIPER_HAVE_DISSECTIO")
