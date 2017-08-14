@@ -54,6 +54,7 @@
 #include <string>
 #include <vector>
 #include <gotcha/gotcha.h>
+extern "C"{
 #ifdef CALIPER_HAVE_SILO
 #include "gotcha_all_silo.h"
 #include "gotcha_silo.h"
@@ -68,7 +69,7 @@
 #endif
 
 #include "gotcha_posix.h"
-
+}
 using namespace cali;
 using namespace std;
 
