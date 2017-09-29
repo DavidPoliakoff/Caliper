@@ -33,15 +33,25 @@
 // A minimal Caliper instrumentation demo 
 
 #include <caliper/cali.h>
+#include <caliper/CaliGotcha.h>
+#include <math.h>
+
+void* getArray(int size){
+  return malloc(sizeof(int)*(size));
+}
 
 int main(int argc, char* argv[])
 {
     CALI_CXX_MARK_FUNCTION;
+    auto dog = cali_runtime_instrument("sqrtf",sqrtf);
+    auto puppy = sqrtf(9.0);
+
+    auto doggo = cali_runtime_instrument("malloc",malloc);
+    auto puppperino = getArray(100);
 
     CALI_MARK_BEGIN("init");
     int count = 4;
     CALI_MARK_END("init");
-
     CALI_CXX_MARK_LOOP_BEGIN(mainloop, "mainloop");        
 
     double t = 0, delta_t = 0.42;

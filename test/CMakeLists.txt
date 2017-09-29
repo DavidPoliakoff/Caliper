@@ -2,6 +2,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 
 add_executable(cali-basic cali-basic.cpp)
+target_link_libraries(cali-basic gotcha)
 add_executable(cali-functional cali-functional.cpp)
 # add_executable(cali-wrap cali-wrap.cpp)
 add_executable(cali-test cali-test.cpp)

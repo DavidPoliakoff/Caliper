@@ -43,6 +43,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 
@@ -53,10 +54,16 @@ public:
     SafeAnnotation(const char* name, int opt=0) : inner_annot(name,opt){
         inner_annot = Annotation(name,opt);
     }
-    SafeAnnotation(SafeAnnotation& other) : inner_annot(other.getAnnot()) {
+    SafeAnnotation(SafeAnnotation const& other) : inner_annot(other.getAnnotConst()) {
         
     }
-    Annotation& getAnnot() {
+    SafeAnnotation(SafeAnnotation& other) : inner_annot(other.getAnnotConst()) {
+        
+    }
+    const Annotation& getAnnotConst() const{
+        return inner_annot;
+    }
+    Annotation& getAnnot(){
         return inner_annot;
     }
     SafeAnnotation& operator = (SafeAnnotation& other){
@@ -67,7 +74,27 @@ public:
         inner_annot.begin();
         return *this;
     }
+    template<typename T>
+    typename std::enable_if<!std::is_same<T,const char>::value,SafeAnnotation&>::type begin(T* data){
+        std::stringstream pointer_write_loc;
+        pointer_write_loc << std::hex << "0x"<< ((long int) data);
+        //std::string stringified = std::to_string((long int)data);
+        //this->set(stringified.c_str());
+        inner_annot.begin(pointer_write_loc.str().c_str());
+        //inner_annot.set((long int)data);
+        return *this;
+    }
+    SafeAnnotation& begin(unsigned long data){
+        //this->set(stringified.c_str());
+        inner_annot.begin(data/1.0);
+        //inner_annot.set((long int)data);
+        return *this;
+    }
     SafeAnnotation& begin(int data){
+        inner_annot.begin(data);
+        return *this;
+    }
+    SafeAnnotation& begin(float data){
         inner_annot.begin(data);
         return *this;
     }
@@ -88,7 +115,26 @@ public:
         return *this;
     }
     //set
+    template<typename T>
+    typename std::enable_if<!std::is_same<T,const char>::value,SafeAnnotation&>::type set(T* data){
+        std::stringstream pointer_write_loc;
+        pointer_write_loc << std::hex << "0x"<< ((long int) data);
+        //this->set(stringified.c_str());
+        inner_annot.set(pointer_write_loc.str().c_str());
+        //inner_annot.set((long int)data);
+        return *this;
+    }
+    SafeAnnotation& set(unsigned long data){
+        //this->set(stringified.c_str());
+        inner_annot.set(data/1.0);
+        //inner_annot.set((long int)data);
+        return *this;
+    }
     SafeAnnotation& set(int data){
+        inner_annot.set(data);
+        return *this;
+    }
+    SafeAnnotation& set(float data){
         inner_annot.set(data);
         return *this;
     }
@@ -129,14 +175,30 @@ cali::SafeAnnotation& wrapper_annotation(){
         return instance;
 }       
 
+//template<int N>
+//const char* annotation_name(){
+//    static std::string name = "function_argument_"+std::to_string(N); 
+//    return (name.c_str());
+//}
+//template<int N>
+//cali::SafeAnnotation& arg_annotation(){
+//        static cali::SafeAnnotation instance(annotation_name<N>());
+//        return instance;
+//}       
 template<int N>
-const char* annotation_name(){
-    static std::string name = "function_argument_"+std::to_string(N); 
+const char* annotation_name(std::string prefix){
+    std::string name;
+    name = prefix+"_argument_"+std::to_string(N); 
     return (name.c_str());
 }
 template<int N>
-cali::SafeAnnotation& arg_annotation(){
-        static cali::SafeAnnotation instance(annotation_name<N>());
+cali::SafeAnnotation arg_annotation(std::string prefix, int flags = 0){
+        return cali::SafeAnnotation(annotation_name<N>(prefix),flags); 
+
+}       
+template<int N>
+cali::Annotation& arg_annotationV2(std::string prefix){
+        static cali::Annotation instance(annotation_name<N>(prefix));
         return instance;
 }       
 template<int N>
@@ -174,7 +236,7 @@ struct ArgRecorder<N, Arg, Args...>{
                                                                                         std::move(std::forward_as_tuple(std::move(cali::Annotation::Guard(dummy_annot())  )))
                                                                                     )
                                                                      ){
-        cali::Annotation::Guard func_annot (arg_annotation<N>().begin(arg).getAnnot());
+        cali::Annotation::Guard func_annot (arg_annotation<N>(name).begin(arg).getAnnot());
         return std::tuple_cat(
             NextRecorder::record(name,args...),
             std::forward_as_tuple(std::move(func_annot))
@@ -182,6 +244,25 @@ struct ArgRecorder<N, Arg, Args...>{
     }
 };
 
+template<int N, typename... Args>
+struct ArgRecorderV2{
+    static auto record(const char* name) -> void {
+        return;
+    }
+};
+
+template <int N, typename Arg, typename... Args>
+struct ArgRecorderV2<N, Arg, Args...>{
+    using NextRecorder = ArgRecorderV2<N+1,Args...>;
+    static auto record(const char* name, Arg arg, Args... args) -> void
+    {
+        
+        SafeAnnotation arg_annot = arg_annotation<N>(name);
+        arg_annot = arg_annot.set(arg);
+        NextRecorder::record(name,args...);
+        arg_annot.end();
+    }
+};
 //TODO: fix
 template<typename LB, typename... Args>
 auto wrap_with_args(const char* name, LB body, Args... args) -> typename std::result_of<LB(Args...)>::type{
@@ -224,12 +305,14 @@ struct ArgWrappedFunction {
       cali::Annotation::Guard func_annot(
           wrapper_annotation().begin(name).getAnnot());
       #ifdef VARIADIC_RETURN_SAFE
-      auto n =ArgRecorder<1,Args...>::record(name,args...);
+      //auto n =ArgRecorder<1,Args...>::record(name,args...);
+      ArgRecorderV2<1,Args...>::record(name,args...);
       #else
       #warning CALIPER WARNING: This  C++ compiler has bugs which prevent argument profiling
       #endif
       auto return_value = body(args...);
-      cali::Annotation return_value_annot("return");
+      std::string return_annot_name = "return_"+std::string(name);
+      SafeAnnotation return_value_annot(return_annot_name.c_str());
       return_value_annot.set(return_value);
       return_value_annot.end();
       return return_value;
@@ -241,7 +324,8 @@ struct ArgWrappedFunction {
       cali::Annotation::Guard func_annot(
           wrapper_annotation().begin(name).getAnnot());
       #ifdef VARIADIC_RETURN_SAFE
-      auto n =ArgRecorder<1,Args...>::record(name,args...);
+      //auto n =ArgRecorder<1,Args...>::record(name,args...);
+      ArgRecorderV2<1,Args...>::record(name,args...);
       #else
       #warning CALIPER WARNING: This  C++ compiler has bugs which prevent argument profiling
       #endif

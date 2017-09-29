@@ -140,6 +140,7 @@ endif()
 if (WITH_GOTCHA)
   set(CALIPER_HAVE_GOTCHA TRUE)
   set(GOTCHA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/gotcha/gotcha-download/gotcha-src/include)
+  include_directories(${GOTCHA_INCLUDE_DIR})
   list(APPEND CALIPER_EXTERNAL_LIBS gotcha)
 endif()
 
