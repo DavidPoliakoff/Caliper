@@ -10,7 +10,7 @@ plt.ion()
 parser = argparse.ArgumentParser()
 parser.add_argument("--inputs", nargs="*")
 parser.add_argument("--initial-query-file")
-
+debug_level = 0
 
 class DocumentationType(enum.Enum):
     Off = 0
@@ -106,6 +106,8 @@ def get_module_name(raw_doc_level):
 
 def to_pandas(poorly_formatted_string):
     formatted = poorly_formatted_string
+    if debug_level > 0:
+        print formatted
     return pandas.read_json(formatted)
 
 
@@ -236,7 +238,7 @@ class CaliperFrame(object):
             additional_args = kwargs['additional_args']
         cmd_outputs = []
         for query_input in self.inputs:
-            full_query = ['--query=' + self.query + ' format ' + 'json()']
+            full_query = ['--query=' + self.query + ' format ' + 'json(quote-all)']
             full_query.extend([query_input])
             full_query.extend(additional_args)
             cmd_output = StringIO.StringIO()
@@ -264,7 +266,7 @@ class CaliperFrame(object):
         additional_args = []
         if 'additional_args' in kwargs:
             additional_args = kwargs['additional_args']
-        full_query = ['--query=' + self.query + ' format ' + 'json()']
+        full_query = ['--query=' + self.query + ' format ' + 'json(quote-all)']
         full_query.extend([input for input in self.inputs])
         full_query.extend(additional_args)
         cmd_output = StringIO.StringIO()
