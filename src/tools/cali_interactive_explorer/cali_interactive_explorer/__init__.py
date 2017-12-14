@@ -826,17 +826,21 @@ def process_trace(df,key,oper):
             active_blackboard = get_grouping_key()
             blackboards[active_blackboard] = {}
         active_blackboard = get_grouping_key()
-        key,val = next(((key,val) for key,val in zip(df.keys(),row) if key in end_key and not pandas.isnull(val)),(None,None))
-        if val is not None:
-            in_user_terms = colloquialize_key(key)
-            blackboards[active_blackboard] = {}
-            states[in_user_terms].pop()
         key,val = next(((key,val) for key,val in zip(df.keys(),row) if key in set_key and not pandas.isnull(val)),(None,None))
         if val is not None:
             in_user_terms = colloquialize_key(key)
             blackboards[active_blackboard] = {}
             states[in_user_terms][-1] = val
-        oper(dict((key,val) for key,val in active_blackboard),blackboards[active_blackboard],row)
+        key, val = next(((key, val) for key, val in zip(df.keys(), row) if key in end_key and not pandas.isnull(val)),
+                        (None, None))
+        if val is not None:
+            in_user_terms = colloquialize_key(key)
+            # If I'm on an end event, operate on it immediately
+            oper(dict((key, val) for key, val in active_blackboard), blackboards[active_blackboard], row)
+            blackboards[active_blackboard] = {}
+            states[in_user_terms].pop()
+        else:
+            oper(dict((key,val) for key,val in active_blackboard),blackboards[active_blackboard],row)
 
 if initial_query_file is not None:
     with open(initial_query_file, "r") as input_file:
