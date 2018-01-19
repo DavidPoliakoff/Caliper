@@ -69,6 +69,34 @@ using namespace std;
 namespace cali
 {
 
+const ConfigSet::Entry configdata[] = {
+    // key, type, value, short description, long description
+    { "automerge", CALI_TYPE_BOOL, "true",
+      "Automatically merge attributes into a common context tree",
+      "Automatically merge attributes into a common context tree.\n"
+      "Decreases the size of context records, but may increase\n"
+      "the amount of metadata and reduce performance."
+    },
+    { "attribute_properties", CALI_TYPE_STRING, "",
+      "List of attribute property presets",
+      "List of attribute property presets, in the form\n"
+      "  attr=prop1:prop2,attr2=prop1:prop2:prop3,attr3=prop1,...\n"
+      "Attribute property flags are:\n"
+      "  asvalue:       Store values directly in snapshot, not in context tree\n"
+      "  nomerge:       Create dedicated context tree branch, don't merge with other attributes\n"
+      "  process_scope: Process-scope attribute\n"
+      "  thread_scope:  Thread-scope attribute\n"
+      "  task_scope:    Task-scope attribute (currently not supported)\n"
+      "  skip_events:   Do not invoke callback functions for updates\n"
+      "  hidden:        Do not include this attribute in snapshots\n"
+    },
+    { "config_check", CALI_TYPE_BOOL, "true",
+      "Perform configuration sanity check at initialization",
+      "Perform configuration sanity check at initialization"
+    },
+    ConfigSet::Terminator
+};
+
 extern void init_attribute_classes(Caliper* c);
 extern void init_api_attributes(Caliper* c);
 extern void init_alloc_tree_entries(Caliper* c);
@@ -167,7 +195,8 @@ struct Caliper::GlobalData
     static volatile sig_atomic_t  s_init_lock;
     static std::mutex             s_init_mutex;
 
-    static const ConfigSet::Entry s_configdata[];
+    //static const ConfigSet::Entry s_configdata[];
+    const ConfigSet::Entry* s_configdata;
 
     static GlobalData*            sG;
 
@@ -226,7 +255,7 @@ struct Caliper::GlobalData
     // --- constructor
 
     GlobalData()
-        : config { RuntimeConfig::init("caliper", s_configdata) },
+        : config { RuntimeConfig::init("caliper", configdata) },
           get_thread_scope_cb { nullptr },
           get_task_scope_cb   { nullptr },
           name_attr { Attribute::invalid },
@@ -354,33 +383,33 @@ Caliper::GlobalData*   Caliper::GlobalData::sG = nullptr;
 
 Caliper::GlobalData::InitHookList* Caliper::GlobalData::s_init_hooks = nullptr;
 
-const ConfigSet::Entry Caliper::GlobalData::s_configdata[] = {
-    // key, type, value, short description, long description
-    { "automerge", CALI_TYPE_BOOL, "true",
-      "Automatically merge attributes into a common context tree",
-      "Automatically merge attributes into a common context tree.\n"
-      "Decreases the size of context records, but may increase\n"
-      "the amount of metadata and reduce performance."
-    },
-    { "attribute_properties", CALI_TYPE_STRING, "",
-      "List of attribute property presets",
-      "List of attribute property presets, in the form\n"
-      "  attr=prop1:prop2,attr2=prop1:prop2:prop3,attr3=prop1,...\n"
-      "Attribute property flags are:\n"
-      "  asvalue:       Store values directly in snapshot, not in context tree\n"
-      "  nomerge:       Create dedicated context tree branch, don't merge with other attributes\n"
-      "  process_scope: Process-scope attribute\n"
-      "  thread_scope:  Thread-scope attribute\n"
-      "  task_scope:    Task-scope attribute (currently not supported)\n"
-      "  skip_events:   Do not invoke callback functions for updates\n"
-      "  hidden:        Do not include this attribute in snapshots\n"
-    },
-    { "config_check", CALI_TYPE_BOOL, "true",
-      "Perform configuration sanity check at initialization",
-      "Perform configuration sanity check at initialization"
-    },
-    ConfigSet::Terminator
-};
+//const ConfigSet::Entry Caliper::GlobalData::s_configdata[] = {
+//    // key, type, value, short description, long description
+//    { "automerge", CALI_TYPE_BOOL, "true",
+//      "Automatically merge attributes into a common context tree",
+//      "Automatically merge attributes into a common context tree.\n"
+//      "Decreases the size of context records, but may increase\n"
+//      "the amount of metadata and reduce performance."
+//    },
+//    { "attribute_properties", CALI_TYPE_STRING, "",
+//      "List of attribute property presets",
+//      "List of attribute property presets, in the form\n"
+//      "  attr=prop1:prop2,attr2=prop1:prop2:prop3,attr3=prop1,...\n"
+//      "Attribute property flags are:\n"
+//      "  asvalue:       Store values directly in snapshot, not in context tree\n"
+//      "  nomerge:       Create dedicated context tree branch, don't merge with other attributes\n"
+//      "  process_scope: Process-scope attribute\n"
+//      "  thread_scope:  Thread-scope attribute\n"
+//      "  task_scope:    Task-scope attribute (currently not supported)\n"
+//      "  skip_events:   Do not invoke callback functions for updates\n"
+//      "  hidden:        Do not include this attribute in snapshots\n"
+//    },
+//    { "config_check", CALI_TYPE_BOOL, "true",
+//      "Perform configuration sanity check at initialization",
+//      "Perform configuration sanity check at initialization"
+//    },
+//    ConfigSet::Terminator
+//};
 
 
 //
