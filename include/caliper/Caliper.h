@@ -67,12 +67,28 @@ public:
     typedef Scope* (*ScopeCallbackFn)(Caliper*, bool can_create);
 
     
-private:
+//TODO DO-NOT-MERGE REENABLE DATA PROTECTIONprivate:
     
     struct GlobalData;
     
     GlobalData* mG;
-    
+    static GlobalData* createGlobalData();
+    template<class... Args>
+    static GlobalData* globalDataForTag(){
+      static GlobalData* data;
+      if(!data){
+        data = createGlobalData();
+      }
+      return data;
+    }
+    static Caliper create_caliper_instance(GlobalData* sG);
+    static Caliper create_caliper_sigsafe_instance(GlobalData* sG);
+    template<class... Args>
+    static Caliper CaliperForTags(){
+      GlobalData* dataForTags = globalDataForTag<Args...>();
+      return create_caliper_instance(dataForTags);
+    }
+private: //TODO DO-NOT-MERGE DELET THIS, USE OTHER PRIVATE TAG ABOVE
     Scope* m_thread_scope;
     Scope* m_task_scope;
 
@@ -271,6 +287,130 @@ public:
     static void    add_init_hook(void(*fn)());
 
     friend struct GlobalData;
+    //template<class... Args>
+    //static Caliper instance();
+    //template<class... Args>
+    //static void    release();
+    //
+    //template<class... Args>
+    //static Caliper sigsafe_instance();
+
+    //template<class... Args>
+    //static bool    is_initialized();
+
+    ///// \brief Add a list of available caliper services.
+    //template<class... Args>
+    //static void    add_services(const CaliperService*);
+
+    ///// \brief Add a function that is called during %Caliper initialization.
+    //template<class... Args>
+    //static void    add_init_hook(void(*fn)());
+///****************/
+//template<class... Args>
+//Caliper
+//instance()
+//{
+//    if (GlobalData::s_init_lock != 0) {
+//        if (GlobalData::s_init_lock == 2)
+//            // Caliper had been initialized previously; we're past the static destructor
+//            return Caliper(0);
+//
+//        lock_guard<mutex> lock(GlobalData::s_init_mutex);
+//
+//        if (!GlobalData::sG) {
+//            if (atexit(::exit_handler) != 0)
+//                Log(0).stream() << "Unable to register exit handler";
+//
+//            GlobalData::sG = new Caliper::GlobalData;
+//            GlobalData::s_init_lock = 0;
+//        }
+//    }
+//
+//    return Caliper(GlobalData::sG, GlobalData::sG->acquire_thread_scope());
+//}
+//
+///// \brief Construct a signal-safe Caliper instance object.
+/////
+///// A signal-safe Caliper instance object will have a flag set to instruct
+///// the API and services that only signal-safe operations can be used.
+/////
+///// \see instance()
+/////
+///// \return Caliper instance object
+//
+//template<class... Args>
+//Caliper
+//sigsafe_instance()
+//{
+//    if (GlobalData::s_init_lock != 0)
+//        return Caliper(0);
+//
+//    Scope* task_scope   = 0; // FIXME: figure out task scope
+//    Scope* thread_scope = GlobalData::sG->acquire_thread_scope(false);
+//
+//    if (!thread_scope || thread_scope->lock.is_locked())
+//        return Caliper(0);
+//
+//    return Caliper(GlobalData::sG, thread_scope, task_scope, true /* is signal */);
+//}
+//
+//template<class... Args>
+//void
+//release()
+//{
+//    delete GlobalData::sG;
+//    GlobalData::sG = 0;
+//}
+//
+///// \brief Test if Caliper has been initialized yet.
+//
+//template<class... Args>
+//bool
+//is_initialized()
+//{
+//    return GlobalData::sG != nullptr;
+//}
+//
+///// \brief Add a list of available caliper services.
+///// Adds services that will be made available by %Caliper. This does *not*
+///// activate the services automatically, they must still be listed in the
+///// CALI_SERVICES_ENABLE configuration variable at runtime.
+///// Services must be provided in a list of CaliperService entries,
+///// terminated by a `{ nullptr, nullptr}` entry. Example:
+/////
+///// \code
+/////   extern void myservice_register(Caliper* c);
+/////
+/////   CaliperService my_services[] = {
+/////     { "myservice", myservice_register },
+/////     { nullptr, nullptr }
+/////   };
+/////
+/////   Caliper::add_services(my_services);
+///// \endcode
+/////
+///// This is only effective _before_ %Caliper is initialized, and should be
+///// called e.g. during static initialization or from a library constructor.
+//
+//template<class... Args>
+//void
+//add_services(const CaliperService* s)
+//{
+//    if (is_initialized())
+//        Log(0).stream() << "add_services(): Caliper is already initialized - cannot add new services" << std::endl;
+//    else    
+//        Services::add_services(s);
+//}
+//
+//template<class... Args>
+//void
+//add_init_hook(void (*hook)())
+//{
+//    if (is_initialized())
+//        Log(0).stream() << "add_init_hook(): Caliper is already initialized - cannot add init hook" << std::endl;
+//    else
+//        GlobalData::add_init_hook(hook);
+//}    //friend struct GlobalData;
 };
 
 } // namespace cali

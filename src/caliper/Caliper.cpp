@@ -341,6 +341,10 @@ struct Caliper::GlobalData
     }
 };
 
+Caliper::GlobalData* Caliper::createGlobalData(){
+  return new GlobalData;
+}
+
 // --- static member initialization
 
 volatile sig_atomic_t  Caliper::GlobalData::s_init_lock = 1;
@@ -1346,3 +1350,43 @@ Caliper::add_init_hook(void (*hook)())
     else
         GlobalData::add_init_hook(hook);
 }
+
+// TODO DO-NOT-MERGE Stupidity starts here
+//
+//
+
+Caliper Caliper::create_caliper_instance(Caliper::GlobalData* sG){
+    if (cali::Caliper::GlobalData::s_init_lock != 0) {
+        if (cali::Caliper::GlobalData::s_init_lock == 2)
+            // Caliper had been initialized previously; we're past the static destructor
+            return Caliper(0);
+
+        lock_guard<mutex> lock(cali::Caliper::GlobalData::s_init_mutex);
+
+        if (!sG) {
+            //TODO: contextualize
+            if (atexit(::exit_handler) != 0)
+                Log(0).stream() << "Unable to register exit handler";
+
+            sG = new Caliper::GlobalData;
+            sG->s_init_lock = 0;
+        }
+    }
+
+    return Caliper(sG, sG->acquire_thread_scope());
+}
+Caliper Caliper::create_caliper_sigsafe_instance(Caliper::GlobalData* sG){
+    if (GlobalData::s_init_lock != 0)
+        return Caliper(0);
+
+    Scope* task_scope   = 0; // FIXME: figure out task scope
+    Scope* thread_scope = sG->acquire_thread_scope(false);
+
+    if (!thread_scope || thread_scope->lock.is_locked())
+        return Caliper(0);
+
+    return Caliper(sG, thread_scope, task_scope, true /* is signal */);
+}
+
+//Caliper create_caliper_sigsafe_instance(GlobalData sG){
+//}
