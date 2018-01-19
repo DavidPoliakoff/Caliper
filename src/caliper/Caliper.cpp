@@ -215,12 +215,12 @@ struct Caliper::GlobalData
         Caliper(sG, scope, 0).release_scope(scope);
     }
 
-    static void add_init_hook(void (*hook)()) {
+    void add_init_hook(void (*hook)()) {
         InitHookList* elem = new InitHookList { hook, s_init_hooks };
         s_init_hooks = elem;
     }
 
-    static void run_init_hooks() {
+    void run_init_hooks() {
         for (InitHookList* lp = s_init_hooks; lp; lp = lp->next)
             (*(lp->hook))();
     }
@@ -1377,7 +1377,7 @@ Caliper::add_init_hook(void (*hook)())
     if (is_initialized())
         Log(0).stream() << "add_init_hook(): Caliper is already initialized - cannot add init hook" << std::endl;
     else
-        GlobalData::add_init_hook(hook);
+        mG->add_init_hook(hook);
 }
 
 // TODO DO-NOT-MERGE Stupidity starts here

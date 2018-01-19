@@ -281,10 +281,10 @@ public:
     static bool    is_initialized();
 
     /// \brief Add a list of available caliper services.
-    static void    add_services(const CaliperService*);
+    void    add_services(const CaliperService*);
 
     /// \brief Add a function that is called during %Caliper initialization.
-    static void    add_init_hook(void(*fn)());
+    void    add_init_hook(void(*fn)());
 
     friend struct GlobalData;
     //template<class... Args>
