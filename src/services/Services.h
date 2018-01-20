@@ -47,15 +47,18 @@ class CaliperService;
 class Services
 {
     struct ServicesImpl;
-    std::unique_ptr<ServicesImpl> mP;
+    //std::unique_ptr<ServicesImpl> mP;
+    ServicesImpl* mP;
 
 public:
 
-    static void add_services(const CaliperService* services);
+    void add_services(const CaliperService* services);
 
-    static void add_default_services();
+    void add_default_services();
 
-    static void register_services(Caliper* c);
+    void register_services(Caliper* c);
+    
+    Services(); 
 };
 
 } // namespace cali

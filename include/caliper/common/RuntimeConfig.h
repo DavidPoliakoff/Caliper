@@ -42,7 +42,7 @@
 
 #include <memory>
 #include <string>
-
+#include <caliper/Caliper.h>
 namespace cali
 {
 
@@ -80,7 +80,7 @@ class RuntimeConfig
 public:
 
     /// \brief Get config entry with given \a key from given \a set
-    static StringConverter get(const char* set, const char* key);
+    static StringConverter get(const char* set, const char* key, const char* prefix="cali");
 
     /// \brief Pre-set config entry \a key to \a value.
     ///
@@ -102,6 +102,7 @@ public:
 
     /// \brief Initialize a ConfigSet.
     static ConfigSet       init(const char* name, const ConfigSet::Entry* set);
+    //static ConfigSet       init(cali::Caliper* c, const char* name, const ConfigSet::Entry* set);
 
     /// \brief Define a %Caliper configuration profile.
     ///

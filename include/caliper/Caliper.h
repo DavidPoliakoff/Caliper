@@ -43,8 +43,8 @@
 #include "common/Record.h"
 #include "common/Variant.h"
 #include "common/util/callback.hpp"
-
 #include <utility>
+#include <caliper/Caliper.h>
 
 namespace cali
 {
@@ -272,7 +272,6 @@ public:
     operator bool () const {
         return mG != 0;
     }
-
     static Caliper instance();
     static void    release();
     

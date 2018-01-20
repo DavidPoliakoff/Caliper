@@ -199,7 +199,7 @@ struct Caliper::GlobalData
     const ConfigSet::Entry* s_configdata;
 
     static GlobalData*            sG;
-
+    Services* my_services;
     struct InitHookList {
         void          (*hook)();
         InitHookList* next;
@@ -262,6 +262,7 @@ struct Caliper::GlobalData
           type_attr { Attribute::invalid },
           prop_attr { Attribute::invalid },
           key_attr  { Attribute::invalid },
+          my_services { new Services() },
           automerge { true },
           process_scope        { new Scope(CALI_SCOPE_PROCESS) },
           default_thread_scope { new Scope(CALI_SCOPE_THREAD)  },
@@ -346,8 +347,10 @@ struct Caliper::GlobalData
         init_attribute_classes(&c);
         init_alloc_tree_entries(&c);
 
-        Services::add_default_services();
-        Services::register_services(&c);
+        //Services::add_default_services();
+        //Services::register_services(&c);
+        my_services->add_default_services();
+        my_services->register_services(&c);
 
         init_api_attributes(&c);
 
@@ -1368,7 +1371,7 @@ Caliper::add_services(const CaliperService* s)
     if (is_initialized())
         Log(0).stream() << "add_services(): Caliper is already initialized - cannot add new services" << std::endl;
     else    
-        Services::add_services(s);
+        mG->my_services->add_services(s);
 }
 
 void

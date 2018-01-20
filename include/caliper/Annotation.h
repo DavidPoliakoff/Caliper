@@ -41,6 +41,7 @@
 #define CALI_ANNOTATION_H
 
 #include "common/cali_types.h"
+#include <caliper/Caliper.h>
 
 namespace cali
 {
@@ -131,7 +132,7 @@ public:
     /// \param name The attribute name
     /// \param opt  %Attribute flags. Bitwise OR combination 
     ///   of \ref cali_attr_properties values.
-    Annotation(const char* name, int opt = 0);
+    Annotation(const char* name, int opt = 0, cali::Caliper = cali::Caliper::instance());
 
     Annotation(const Annotation&);
 

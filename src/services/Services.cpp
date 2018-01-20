@@ -61,20 +61,29 @@ struct ServicesList {
     ServicesList* next;
 };
 
-ServicesList* s_services_list { nullptr };
 
 }
 
 
 namespace cali
 {
+const ConfigSet::Entry             configdata[] = {
+    // key, type, value, short description, long description
+    { "enable", CALI_TYPE_STRING, "",
+      "List of service modules to enable",
+      "A list of comma-separated names of the service modules to enable"      
+    },
+    ConfigSet::Terminator
+};
 
 struct Services::ServicesImpl
 {
     // --- data
 
-    static std::unique_ptr<ServicesImpl> s_instance;
-    static const ConfigSet::Entry        s_configdata[];
+    //std::unique_ptr<ServicesImpl> s_instance;
+
+    const ConfigSet::Entry*        s_configdata;
+    ServicesList* s_services_list;
 
     ConfigSet m_config;
 
@@ -87,7 +96,7 @@ struct Services::ServicesImpl
         if (Log::verbosity() >= 2) {
             ostringstream sstr;
 
-            for (const ServicesList* lp = ::s_services_list; lp; lp = lp->next)
+            for (const ServicesList* lp = s_services_list; lp; lp = lp->next)
                 for (const CaliperService* s = lp->services; s->name && s->register_fn; ++s)
                     sstr << ' ' << s->name;
 
@@ -98,7 +107,7 @@ struct Services::ServicesImpl
 
         // register caliper services
 
-        for (const ServicesList* lp = ::s_services_list; lp; lp = lp->next)
+        for (const ServicesList* lp = s_services_list; lp; lp = lp->next)
             for (const CaliperService* s = lp->services; s->name && s->register_fn; ++s) {
                 auto it = find(services.begin(), services.end(), string(s->name));
 
@@ -113,27 +122,16 @@ struct Services::ServicesImpl
     }
 
     ServicesImpl()
-        : m_config { RuntimeConfig::init("services", s_configdata) }
+        : s_configdata{configdata},
+          m_config { RuntimeConfig::init("services", s_configdata) },
+          //s_services_list {new ServicesList({nullptr})}
+          s_services_list {nullptr}
         { }
 
-    static ServicesImpl* instance() {
-        if (!s_instance)
-            s_instance.reset(new ServicesImpl);
-
-        return s_instance.get();
-    }
 };
 
-unique_ptr<Services::ServicesImpl> Services::ServicesImpl::s_instance      { nullptr };
+//unique_ptr<Services::ServicesImpl> Services::ServicesImpl::s_instance      { nullptr };
 
-const ConfigSet::Entry             Services::ServicesImpl::s_configdata[] = {
-    // key, type, value, short description, long description
-    { "enable", CALI_TYPE_STRING, "",
-      "List of service modules to enable",
-      "A list of comma-separated names of the service modules to enable"      
-    },
-    ConfigSet::Terminator
-};
 
 } // namespace cali
 
@@ -144,8 +142,8 @@ const ConfigSet::Entry             Services::ServicesImpl::s_configdata[] = {
 
 void Services::add_services(const CaliperService* services)
 {
-    ::ServicesList* elem = new ServicesList { services, ::s_services_list };
-    ::s_services_list = elem;
+    ServicesList* elem = new ServicesList { services, mP->s_services_list };
+    mP->s_services_list = elem;
 }
 
 void Services::add_default_services()
@@ -155,5 +153,9 @@ void Services::add_default_services()
 
 void Services::register_services(Caliper* c)
 {
-    return ServicesImpl::instance()->register_services(c);
+    return mP->register_services(c);
+}
+
+Services::Services(){
+  mP = new ServicesImpl();
 }

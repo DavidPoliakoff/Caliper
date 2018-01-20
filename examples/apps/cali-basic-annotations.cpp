@@ -34,6 +34,7 @@
 
 #include <caliper/cali.h>
 #include <caliper/Caliper.h>
+#include <caliper/Funnotation.h>
 struct empty_tag{};
 int main(int argc, char* argv[])
 {
@@ -41,6 +42,9 @@ int main(int argc, char* argv[])
     // Mark begin/end of the current function.
     //   Sets "function=main" in Caliper.
     CALI_CXX_MARK_FUNCTION;
+    cali::Annotation dog_annot = cali::scoped<empty_tag>::Annotation("dogs");
+    dog_annot.begin("DOGS");
+    dog_annot.end();
     auto xdog = cali::Caliper::globalDataForTag<empty_tag>();
     auto xdog3 = cali::Caliper::CaliperForTags<empty_tag>();
 

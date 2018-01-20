@@ -123,6 +123,7 @@ struct Annotation::Impl {
     std::string             m_name;
     int                     m_opt;
     std::atomic<int>        m_refcount;
+    cali::Caliper m_cali;
 
     Impl(const std::string& name, int opt)
         : m_attr(nullptr), 
@@ -136,25 +137,22 @@ struct Annotation::Impl {
     }
     
     void begin(const Variant& data) {
-        Caliper   c;
-        Attribute attr = get_attribute(c, data.type());
+        //Caliper   c;
+        Attribute attr = get_attribute(m_cali, data.type());
 
         if ((attr.type() == data.type()) && attr.type() != CALI_TYPE_INV)
-            c.begin(attr, data);
+            m_cali.begin(attr, data);
     }
 
     void set(const Variant& data) {
-        Caliper   c;
-        Attribute attr = get_attribute(c, data.type());
+        Attribute attr = get_attribute(m_cali, data.type());
 
         if ((attr.type() == data.type()) && attr.type() != CALI_TYPE_INV)
-            c.set(attr, data);
+            m_cali.set(attr, data);
     }
 
     void end() {
-        Caliper c;
-        
-        c.end(get_attribute(c));
+        m_cali.end(get_attribute(m_cali));
     }
 
     Attribute get_attribute(Caliper& c, cali_attr_type type = CALI_TYPE_INV) {
@@ -212,7 +210,7 @@ Annotation::Guard::~Guard()
 
 // --- Constructors / destructor
 
-Annotation::Annotation(const char* name, int opt)
+Annotation::Annotation(const char* name, int opt, cali::Caliper in)
     : pI(new Impl(name, opt))
 { }
 
