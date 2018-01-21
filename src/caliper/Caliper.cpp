@@ -1389,9 +1389,10 @@ Caliper::add_init_hook(void (*hook)())
 
 Caliper Caliper::create_caliper_instance(Caliper::GlobalData* sG){
     if (cali::Caliper::GlobalData::s_init_lock != 0) {
-        if (cali::Caliper::GlobalData::s_init_lock == 2)
+        if (cali::Caliper::GlobalData::s_init_lock == 2){
             // Caliper had been initialized previously; we're past the static destructor
             return Caliper(0);
+        }
 
         lock_guard<mutex> lock(cali::Caliper::GlobalData::s_init_mutex);
 
@@ -1404,7 +1405,6 @@ Caliper Caliper::create_caliper_instance(Caliper::GlobalData* sG){
             sG->s_init_lock = 0;
         }
     }
-
     return Caliper(sG, sG->acquire_thread_scope());
 }
 Caliper Caliper::create_caliper_sigsafe_instance(Caliper::GlobalData* sG){

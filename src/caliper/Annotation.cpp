@@ -125,13 +125,14 @@ struct Annotation::Impl {
     std::atomic<int>        m_refcount;
     cali::Caliper m_cali;
 
-    Impl(const std::string& name, int opt)
+    Impl(const std::string& name, int opt, cali::Caliper in)
         : m_attr(nullptr), 
           m_name(name), 
           m_opt(opt),
-          m_refcount(1)
-        { }
-
+          m_refcount(1),
+          m_cali(in)
+        { 
+        }
     ~Impl() {
         delete m_attr.load();
     }
@@ -211,7 +212,7 @@ Annotation::Guard::~Guard()
 // --- Constructors / destructor
 
 Annotation::Annotation(const char* name, int opt, cali::Caliper in)
-    : pI(new Impl(name, opt))
+    : pI(new Impl(name, opt, in))
 { }
 
 Annotation::~Annotation()

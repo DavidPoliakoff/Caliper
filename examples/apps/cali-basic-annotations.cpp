@@ -42,7 +42,8 @@ int main(int argc, char* argv[])
     // Mark begin/end of the current function.
     //   Sets "function=main" in Caliper.
     CALI_CXX_MARK_FUNCTION;
-    cali::Annotation dog_annot = cali::scoped<empty_tag>::Annotation("dogs");
+    cali::Annotation func_annot("function_attr");
+    cali::Annotation dog_annot = cali::Scoped<empty_tag>::Annotation("dogs");
     dog_annot.begin("DOGS");
     dog_annot.end();
     auto xdog = cali::Caliper::globalDataForTag<empty_tag>();

@@ -55,7 +55,7 @@ Annotation::Guard::~Guard()
 /// Construct an annotation object for context attribute \c name. 
 /// 
 
-Annotation::Annotation(const char* name, int opt)
+Annotation::Annotation(const char* name, int opt, cali::Caliper in)
     : pI(0)
 { }
 
