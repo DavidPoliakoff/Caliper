@@ -101,7 +101,7 @@ public:
     static void            set(const char* key, const std::string& value);
 
     /// \brief Initialize a ConfigSet.
-    static ConfigSet       init(const char* name, const ConfigSet::Entry* set);
+    static ConfigSet       init(const char* name, const ConfigSet::Entry* set, const char* prefix="cali");
     //static ConfigSet       init(cali::Caliper* c, const char* name, const ConfigSet::Entry* set);
 
     /// \brief Define a %Caliper configuration profile.

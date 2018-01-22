@@ -389,9 +389,10 @@ RuntimeConfig::set(const char* key, const std::string& value)
 
 ConfigSet
 //RuntimeConfig::init(Caliper* cali, const char* name, const ConfigSet::Entry* list)
-RuntimeConfig::init(const char* name, const ConfigSet::Entry* list)
+//TODO: is flipping the prefix argument order here okay? It was done as a prototyping detial, consider it before merging
+RuntimeConfig::init(const char* name, const ConfigSet::Entry* list, const char* prefix)
 {
-    return ConfigSet(RuntimeConfigImpl::instance()->init("cali",name, list));
+    return ConfigSet(RuntimeConfigImpl::instance()->init(prefix,name, list));
 }
 
 void

@@ -54,6 +54,10 @@ namespace cali
 class CaliperService;
 class Node;    
 class SnapshotRecord;
+// TODO: should this be externally visible outside Class Caliper?
+struct CaliperInstanceConfiguration{
+   const char* prefix; 
+};
     
 /// \class Caliper
 /// \brief The main interface for the caliper runtime system
@@ -81,12 +85,30 @@ public:
       }
       return data;
     }
-    static Caliper create_caliper_instance(GlobalData* sG);
-    static Caliper create_caliper_sigsafe_instance(GlobalData* sG);
+    static Caliper initialize_caliper_instance(GlobalData* sG, CaliperInstanceConfiguration* config);
+    static Caliper initialize_caliper_sigsafe_instance(GlobalData* sG, CaliperInstanceConfiguration* config);
+    static Caliper request_caliper_instance(GlobalData* sG);
+    static Caliper request_caliper_sigsafe_instance(GlobalData* sG);
+    // TODO: this is prototyping code, real version should merge configurations
+    template<class Arg, class... Args>
+    static CaliperInstanceConfiguration* ConfigurationForArgs(){
+      static CaliperInstanceConfiguration* config;
+      if(!config){
+        config = new CaliperInstanceConfiguration;
+        config->prefix = Arg::prefix;
+      }
+      return config;
+    }     
+    template<class... Args>
+    static Caliper InitializeCaliper(){
+      CaliperInstanceConfiguration* config = ConfigurationForArgs<Args...>();
+      GlobalData* instanceGlobalData = globalDataForTag<Args...>();
+      
+    }
     template<class... Args>
     static Caliper CaliperForTags(){
       GlobalData* dataForTags = globalDataForTag<Args...>();
-      return create_caliper_instance(dataForTags);
+      return request_caliper_instance(dataForTags);
     }
 private: //TODO DO-NOT-MERGE DELET THIS, USE OTHER PRIVATE TAG ABOVE
     Scope* m_thread_scope;

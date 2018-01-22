@@ -184,6 +184,9 @@ struct Caliper::Scope
 };
 
 
+
+constexpr const CaliperInstanceConfiguration default_config = { "cali" };
+
 //
 // --- Caliper Global Data
 //
@@ -1387,7 +1390,7 @@ Caliper::add_init_hook(void (*hook)())
 //
 //
 
-Caliper Caliper::create_caliper_instance(Caliper::GlobalData* sG){
+Caliper Caliper::request_caliper_instance(Caliper::GlobalData* sG){
     if (cali::Caliper::GlobalData::s_init_lock != 0) {
         if (cali::Caliper::GlobalData::s_init_lock == 2){
             // Caliper had been initialized previously; we're past the static destructor
@@ -1407,7 +1410,7 @@ Caliper Caliper::create_caliper_instance(Caliper::GlobalData* sG){
     }
     return Caliper(sG, sG->acquire_thread_scope());
 }
-Caliper Caliper::create_caliper_sigsafe_instance(Caliper::GlobalData* sG){
+Caliper Caliper::request_caliper_sigsafe_instance(Caliper::GlobalData* sG){
     if (GlobalData::s_init_lock != 0)
         return Caliper(0);
 
