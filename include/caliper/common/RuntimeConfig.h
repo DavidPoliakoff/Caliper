@@ -72,7 +72,7 @@ public:
 
     StringConverter get(const char* key) const;
 };
-
+class RuntimeConfigImpl; 
 /// \brief Functionality to read and retrieve %Caliper config settings.
 class RuntimeConfig
 {
@@ -89,7 +89,7 @@ public:
     ///
     /// \note: Only effective *before* initialization of the %Caliper
     ///   runtime system.
-    static void            preset(const char* key, const std::string& value);
+    static void            preset(const char* key, const std::string& value, RuntimeConfigImpl* imp);
 
     /// \brief Set config entry \a key to \a value.
     ///
