@@ -337,3 +337,224 @@ namespace cali
 CaliperService timestamp_service = { "timestamp", ::Timestamp::timestamp_register };
 
 } // namespace cali
+
+template<typename MeasurementImplementation>
+struct MeasurementPattern {
+    template<typename ItemType>
+    using ArrayType = std::vector<ItemType>;
+    using AttributeId = cali_id_t;
+    template<typename ItemType>
+    using TbdReturnType = ArrayType<ItemType>; //&&?
+
+    ArrayType<Attribute> m_measurement_attrs;
+    ArrayType<Attribute> m_offset_attrs;
+    ArrayType<Attribute> m_exclusive_attrs;
+    ArrayType<Attribute> m_inclusive_attrs;
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
+        Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
+        ){
+        auto subthis = static_cast<MeasurementImplementation*>(this);
+        auto preamble = subthis->createPreamble();
+
+        auto measurements = subthis->recordMeasurements(preamble);
+        sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
+
+        ArrayType<Variant> last(m_offset_attrs.size());
+        auto offs = subthis->recordBlackboardOffsets(preamble);
+        
+        for (size_t i = 0; i < m_offset_attrs.size(); ++i)    
+            last[i] = c->exchange(exp, m_offset_attrs[i], offs[i]);
+
+        auto excls = subthis->recordExclusiveValues(preamble, last);
+
+        sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
+
+        if (m_inclusive_attrs.size() && info) {
+            //using StackThing = typeRouter<true>::type<ArrayType<decltype(preamble),Attribute>>;
+            using StackThing = std::vector<decltype(subthis->handlePhaseBegin(spawning_attr_id,preamble))>;
+            static thread_local std::vector< StackThing* > exp_stacks;
+
+            size_t expI = exp->id();
+
+            StackThing* stack = nullptr;
+            if (exp_stacks.size() < expI)
+                stack = exp_stacks[expI];
+
+            if (!stack) {
+                if (exp_stacks.size() <= expI)
+                    exp_stacks.resize(expI + 1);
+                
+                stack = new StackThing;
+
+                exp_stacks[i] = stack;
+            }
+
+            Entry event = info->get(begin_evt_attr);
+
+            if (event.is_empty())
+                event = info->get(end_evt_attr);
+            if (event.is_empty())
+                return;
+
+            cali_id_t spawning_attr_id = event.value().to_id();
+
+            if (!is_this_our_stack_attribute(spawning_attr_id))
+                return;
+
+            if (event.attribute() == begin_evt_attr.id()) {
+                auto ret = subthis->handlePhaseBegin(spawning_attr_id, preamble, event.value().to_id());
+                stack.push_back(std::make_pair(preamble,ret));
+            } else if (event.attribute() == end_evt_attr.id()) {
+                auto prelast = stack.pop();
+                auto previous_preamble = prelast.first();
+                auto last = prelast.second();
+                auto ret = subthis->handlePhaseEnd(spawning_attr_id, preamble, last);
+                sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+            }
+        }
+    }
+    
+    
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
+        Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
+        ){
+        auto subthis = static_cast<MeasurementImplementation*>(this);
+      
+
+        auto measurements = subthis->recordMeasurements();
+        sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
+
+        ArrayType<Variant> last(m_offset_attrs.size());
+        auto offs = subthis->recordBlackboardOffsets();
+        
+        for (size_t i = 0; i < m_offset_attrs.size(); ++i)    
+            last[i] = c->exchange(exp, m_offset_attrs[i], offs[i]);
+
+        auto excls = subthis->recordExclusiveValues(last);
+
+        sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
+
+        if (m_inclusive_attrs.size() && info) {
+            static thread_local std::vector< StackThing* > exp_stacks;
+
+            size_t expI = exp->id();
+
+            StackThing* stack = nullptr;
+
+            if (exp_stacks.size() < expI)
+                stack = exp_stacks[expI];
+
+            if (!stack) {
+                if (exp_stacks.size() <= expI)
+                    exp_stacks.resize(expI + 1);
+                
+                stack = new StackThing;
+
+                exp_stacks[i] = stack;
+            }
+
+            Entry event = info->get(begin_evt_attr);
+
+            if (event.is_empty())
+                event = info->get(end_evt_attr);
+            if (event.is_empty())
+                return;
+
+            cali_id_t spawning_attr_id = event.value().to_id();
+
+            if (!is_this_our_stack_attribute(spawning_attr_id))
+                return;
+
+            if (event.attribute() == begin_evt_attr.id()) {
+                auto ret = subthis->handlePhaseBegin(spawning_attr_id, event.value().to_id());
+                stack.push(ret);
+            } else if (event.attribute() == end_evt_attr.id()) {
+                auto last = stack.pop();
+                auto ret = subthis->handlePhaseEnd(spawning_attr_id, last);
+                sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+            }
+        }
+    }
+        
+
+    void createMeasurementAttributes()
+        /** TODO: Implement */{
+        
+    }
+    void setMeasurementAttributes(ArrayType<Attribute> measurement_attributes){
+    }
+    void setExclusiveAttributes(ArrayType<Attribute> measurement_attributes){
+    }
+    void setInclusiveAttributes(ArrayType<Attribute> measurement_attributes){
+    }
+    handlePhaseBegin(AttributeId tbd_spawning_event_id){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    handlePhaseBegin(AttributeId tbd_spawning_event_id, typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type, ArrayType<Variant>& begin_vals){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordMeasurements(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordBlackboardOffsets(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordExclusiveValues(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type preamble, ArrayType<Variant> last){
+    }
+
+    /// void typed
+
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    handlePhaseBegin(AttributeId tbd_spawning_event_id){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id, ArrayType<Variant>& begin_vals){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordMeasurements(){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordBlackboardOffsets(){
+    }
+    template<typename Foo = Measurement>
+    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    recordExclusiveValues(PreambleThing preamble, ArrayType<Variant> last){
+    }
+    void providePreambleValues(){}
+    
+    void handle_event(){}
+};
+
+struct TimestampThing : public MeasurmentPattern<TimestampThing> {
+    
+    using chronoThing = void*;
+    SomeWeirdType providePreambleValues(){
+    }
+    handlePhaseBegin(AttributeId attr, SomeWeirdType preamble_provided_garbage){
+    }
+    chronoThing tstart;
+    void handle_event(){
+        /** do timestampy things */
+    }
+
+    void init_cb() {
+        tstart = chrono_garbage();
+        createMeasurementAttributes({ "time.offset" });
+        createPhaseAttributes({ "" });
+    }
+    
+};
