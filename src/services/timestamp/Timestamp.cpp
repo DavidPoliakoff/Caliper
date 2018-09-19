@@ -338,8 +338,17 @@ CaliperService timestamp_service = { "timestamp", ::Timestamp::timestamp_registe
 
 } // namespace cali
 
+
 template<typename MeasurementImplementation>
 struct MeasurementPattern {
+    bool is_this_our_stack_attribute(cali_id_t id){
+      /** TODO: implement */
+      return true;
+    }
+    Attribute begin_evt_attr { Attribute::invalid };
+    Attribute set_evt_attr   { Attribute::invalid };
+    Attribute end_evt_attr   { Attribute::invalid };
+    Attribute lvl_attr       { Attribute::invalid };
     template<typename ItemType>
     using ArrayType = std::vector<ItemType>;
     using AttributeId = cali_id_t;
@@ -350,7 +359,7 @@ struct MeasurementPattern {
     ArrayType<Attribute> m_offset_attrs;
     ArrayType<Attribute> m_exclusive_attrs;
     ArrayType<Attribute> m_inclusive_attrs;
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
         Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
         ){
@@ -372,7 +381,8 @@ struct MeasurementPattern {
 
         if (m_inclusive_attrs.size() && info) {
             //using StackThing = typeRouter<true>::type<ArrayType<decltype(preamble),Attribute>>;
-            using StackThing = std::vector<decltype(subthis->handlePhaseBegin(spawning_attr_id,preamble))>;
+
+            using StackThing = std::vector<decltype(subthis->handlePhaseBegin(std::declval<cali_id_t>(),preamble))>;
             static thread_local std::vector< StackThing* > exp_stacks;
 
             size_t expI = exp->id();
@@ -387,7 +397,7 @@ struct MeasurementPattern {
                 
                 stack = new StackThing;
 
-                exp_stacks[i] = stack;
+                exp_stacks[expI] = stack;
             }
 
             Entry event = info->get(begin_evt_attr);
@@ -403,20 +413,19 @@ struct MeasurementPattern {
                 return;
 
             if (event.attribute() == begin_evt_attr.id()) {
-                auto ret = subthis->handlePhaseBegin(spawning_attr_id, preamble, event.value().to_id());
-                stack.push_back(std::make_pair(preamble,ret));
+                stack->push_back( subthis->handlePhaseBegin(spawning_attr_id, preamble, event.value().to_id()) );
             } else if (event.attribute() == end_evt_attr.id()) {
-                auto prelast = stack.pop();
-                auto previous_preamble = prelast.first();
-                auto last = prelast.second();
-                auto ret = subthis->handlePhaseEnd(spawning_attr_id, preamble, last);
+                
+                auto stack_top = *(stack->back());
+                auto ret = subthis->handlePhaseEnd(spawning_attr_id, stack_top);
                 sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+                stack->pop_back();
             }
         }
     }
     
     
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
         Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
         ){
@@ -437,6 +446,8 @@ struct MeasurementPattern {
         sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
 
         if (m_inclusive_attrs.size() && info) {
+            
+            using StackThing = std::vector<decltype(subthis->handlePhaseBegin(std::declval<cali_id_t>()))>;
             static thread_local std::vector< StackThing* > exp_stacks;
 
             size_t expI = exp->id();
@@ -452,7 +463,7 @@ struct MeasurementPattern {
                 
                 stack = new StackThing;
 
-                exp_stacks[i] = stack;
+                exp_stacks[expI] = stack;
             }
 
             Entry event = info->get(begin_evt_attr);
@@ -469,11 +480,12 @@ struct MeasurementPattern {
 
             if (event.attribute() == begin_evt_attr.id()) {
                 auto ret = subthis->handlePhaseBegin(spawning_attr_id, event.value().to_id());
-                stack.push(ret);
+                stack->push_back(ret);
             } else if (event.attribute() == end_evt_attr.id()) {
-                auto last = stack.pop();
+                auto last = *(stack->back());
                 auto ret = subthis->handlePhaseEnd(spawning_attr_id, last);
                 sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+                stack->pop_back();
             }
         }
     }
@@ -489,72 +501,51 @@ struct MeasurementPattern {
     }
     void setInclusiveAttributes(ArrayType<Attribute> measurement_attributes){
     }
-    handlePhaseBegin(AttributeId tbd_spawning_event_id){
-    }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     handlePhaseBegin(AttributeId tbd_spawning_event_id, typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type, ArrayType<Variant>& begin_vals){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     recordMeasurements(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     recordExclusiveValues(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type preamble, ArrayType<Variant> last){
     }
 
     /// void typed
 
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     handlePhaseBegin(AttributeId tbd_spawning_event_id){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     handlePhaseEnd(AttributeId tbd_spawning_event_id, ArrayType<Variant>& begin_vals){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     recordMeasurements(){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(){
     }
-    template<typename Foo = Measurement>
+    template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
-    recordExclusiveValues(PreambleThing preamble, ArrayType<Variant> last){
+    recordExclusiveValues(ArrayType<Variant> last){
     }
     void providePreambleValues(){}
     
     void handle_event(){}
 };
 
-struct TimestampThing : public MeasurmentPattern<TimestampThing> {
-    
-    using chronoThing = void*;
-    SomeWeirdType providePreambleValues(){
-    }
-    handlePhaseBegin(AttributeId attr, SomeWeirdType preamble_provided_garbage){
-    }
-    chronoThing tstart;
-    void handle_event(){
-        /** do timestampy things */
-    }
-
-    void init_cb() {
-        tstart = chrono_garbage();
-        createMeasurementAttributes({ "time.offset" });
-        createPhaseAttributes({ "" });
-    }
-    
-};
