@@ -360,15 +360,15 @@ struct MeasurementPattern {
     ArrayType<Attribute> m_exclusive_attrs;
     ArrayType<Attribute> m_inclusive_attrs;
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
+    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::value,void>::type snapshot_cb(
         Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
         ){
         auto subthis = static_cast<MeasurementImplementation*>(this);
         auto preamble = subthis->createPreamble();
 
         auto measurements = subthis->recordMeasurements(preamble);
-        sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
-
+        //sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
+        c->make_entrylist(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data(), *sbuf);
         ArrayType<Variant> last(m_offset_attrs.size());
         auto offs = subthis->recordBlackboardOffsets(preamble);
         
@@ -377,8 +377,8 @@ struct MeasurementPattern {
 
         auto excls = subthis->recordExclusiveValues(preamble, last);
 
-        sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
-
+        //sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
+        c->make_entrylist(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data(), *sbuf);
         if (m_inclusive_attrs.size() && info) {
             //using StackThing = typeRouter<true>::type<ArrayType<decltype(preamble),Attribute>>;
 
@@ -413,12 +413,13 @@ struct MeasurementPattern {
                 return;
 
             if (event.attribute() == begin_evt_attr.id()) {
-                stack->push_back( subthis->handlePhaseBegin(spawning_attr_id, preamble, event.value().to_id()) );
+                stack->push_back( subthis->handlePhaseBegin(spawning_attr_id, preamble) );
             } else if (event.attribute() == end_evt_attr.id()) {
                 
-                auto stack_top = *(stack->back());
+                auto stack_top = stack->back();
                 auto ret = subthis->handlePhaseEnd(spawning_attr_id, stack_top);
-                sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+                //sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+                c->make_entrylist(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data(),*sbuf);
                 stack->pop_back();
             }
         }
@@ -426,7 +427,10 @@ struct MeasurementPattern {
     
     
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,void>::type snapshot_cb(
+    typename std::enable_if<std::is_same<
+                              typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,
+                              void
+                           >::value,void>::type snapshot_cb(
         Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
         ){
         auto subthis = static_cast<MeasurementImplementation*>(this);
@@ -489,8 +493,8 @@ struct MeasurementPattern {
             }
         }
     }
-        
-
+    template<typename Foo=MeasurementImplementation> 
+    using preambleCallType = typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type;
     void createMeasurementAttributes()
         /** TODO: Implement */{
         
@@ -502,50 +506,69 @@ struct MeasurementPattern {
     void setInclusiveAttributes(ArrayType<Attribute> measurement_attributes){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
+    //typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::value,TbdReturnType<Variant>>::type    
     handlePhaseBegin(AttributeId tbd_spawning_event_id, typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
-    handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type, ArrayType<Variant>& begin_vals){
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::template handlePhaseBegin<Foo>)(Foo,AttributeId,preambleCallType<Foo>)>::type){
     }
+    //template<typename Foo = MeasurementImplementation>
+    //typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::value,TbdReturnType<Variant>>::type    
+    //handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type, ArrayType<Variant>& begin_vals){
+    //}
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordMeasurements(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordExclusiveValues(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type preamble, ArrayType<Variant> last){
     }
 
     /// void typed
 
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     handlePhaseBegin(AttributeId tbd_spawning_event_id){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
-    handlePhaseEnd(AttributeId tbd_spawning_event_id, ArrayType<Variant>& begin_vals){
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id, typename std::result_of<decltype(&Foo::template handlePhaseBegin<Foo>)(Foo,AttributeId)>::type
+){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordMeasurements(){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(){
     }
     template<typename Foo = MeasurementImplementation>
-    typename std::enable_if<std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::type,TbdReturnType<Variant>>::type    
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordExclusiveValues(ArrayType<Variant> last){
     }
-    void providePreambleValues(){}
-    
+    void createPreamble(){}
+     
     void handle_event(){}
 };
+
+struct DoesImmediate : public MeasurementPattern<DoesImmediate>{
+  int createPreamble(){
+    return 0;
+  }
+
+};
+
+void instantiator(){
+  DoesImmediate doz;
+  doz.snapshot_cb(NULL,NULL,0,NULL,NULL);
+}
+
 
