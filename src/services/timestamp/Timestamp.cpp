@@ -334,13 +334,16 @@ const ConfigSet::Entry Timestamp::s_configdata[] = {
 namespace cali
 {
 
-CaliperService timestamp_service = { "timestamp", ::Timestamp::timestamp_register };
+//CaliperService timestamp_service = { "timestamp", ::Timestamp::timestamp_register };
 
 } // namespace cali
 
 
 template<typename MeasurementImplementation>
 struct MeasurementPattern {
+    
+  MeasurementPattern(){
+  }
     bool is_this_our_stack_attribute(cali_id_t id){
       /** TODO: implement */
       return true;
@@ -363,9 +366,10 @@ struct MeasurementPattern {
     typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::value,void>::type snapshot_cb(
         Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info,  SnapshotRecord* sbuf
         ){
+        std::cout << "DOG1\n";
         auto subthis = static_cast<MeasurementImplementation*>(this);
         auto preamble = subthis->createPreamble();
-
+        std::cout << "POSTPREAMBLE"<<std::endl; 
         auto measurements = subthis->recordMeasurements(preamble);
         //sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
         c->make_entrylist(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data(), *sbuf);
@@ -437,7 +441,7 @@ struct MeasurementPattern {
       
 
         auto measurements = subthis->recordMeasurements();
-        sbuf->append(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data());
+        c->make_entrylist(m_measurement_attrs.size(), m_measurement_attrs.data(), measurements.data(),*sbuf);
 
         ArrayType<Variant> last(m_offset_attrs.size());
         auto offs = subthis->recordBlackboardOffsets();
@@ -447,7 +451,7 @@ struct MeasurementPattern {
 
         auto excls = subthis->recordExclusiveValues(last);
 
-        sbuf->append(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data());
+        c->make_entrylist(m_exclusive_attrs.size(), m_exclusive_attrs.data(), excls.data(),*sbuf);
 
         if (m_inclusive_attrs.size() && info) {
             
@@ -483,12 +487,12 @@ struct MeasurementPattern {
                 return;
 
             if (event.attribute() == begin_evt_attr.id()) {
-                auto ret = subthis->handlePhaseBegin(spawning_attr_id, event.value().to_id());
+                auto ret = subthis->handlePhaseBegin(spawning_attr_id);
                 stack->push_back(ret);
             } else if (event.attribute() == end_evt_attr.id()) {
-                auto last = *(stack->back());
+                auto last = stack->back();
                 auto ret = subthis->handlePhaseEnd(spawning_attr_id, last);
-                sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
+                c->make_entrylist(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data(),*sbuf);
                 stack->pop_back();
             }
         }
@@ -500,10 +504,13 @@ struct MeasurementPattern {
         
     }
     void setMeasurementAttributes(ArrayType<Attribute> measurement_attributes){
+      m_measurement_attrs = measurement_attributes;
     }
     void setExclusiveAttributes(ArrayType<Attribute> measurement_attributes){
+      m_exclusive_attrs = measurement_attributes;
     }
     void setInclusiveAttributes(ArrayType<Attribute> measurement_attributes){
+      m_inclusive_attrs = measurement_attributes;
     }
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
@@ -514,6 +521,10 @@ struct MeasurementPattern {
     typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::template handlePhaseBegin<Foo>)(Foo,AttributeId,preambleCallType<Foo>)>::type){
     }
+    template<typename Foo = MeasurementImplementation>
+    typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::handlePhaseBegin)(Foo,AttributeId,preambleCallType<Foo>)>::type){
+    }
     //template<typename Foo = MeasurementImplementation>
     //typename std::enable_if<!std::is_same<typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type,void>::value,TbdReturnType<Variant>>::type    
     //handlePhaseEnd(AttributeId tbd_spawning_event_id,typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type, ArrayType<Variant>& begin_vals){
@@ -521,14 +532,17 @@ struct MeasurementPattern {
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordMeasurements(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
+      return TbdReturnType<Variant>();
     }
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type){
+      return TbdReturnType<Variant>();
     }
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<!std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordExclusiveValues(typename std::result_of<decltype(&Foo::createPreamble)(Foo)>::type preamble, ArrayType<Variant> last){
+      return TbdReturnType<Variant>();
     }
 
     /// void typed
@@ -544,25 +558,72 @@ struct MeasurementPattern {
     }
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
+    handlePhaseEnd(AttributeId tbd_spawning_event_id, typename std::result_of<decltype(&Foo::handlePhaseBegin)(Foo,AttributeId)>::type
+){
+    }
+    // DBG
+    
+    //
+    template<typename Foo = MeasurementImplementation>
+    typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordMeasurements(){
     }
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordBlackboardOffsets(){
     }
+
     template<typename Foo = MeasurementImplementation>
     typename std::enable_if<std::is_same<preambleCallType<Foo>,void>::value,TbdReturnType<Variant>>::type    
     recordExclusiveValues(ArrayType<Variant> last){
     }
-    void createPreamble(){}
+    void createPreamble(){
+      std::cout << "In base createPreamble\n";
+    }
      
-    void handle_event(){}
 };
 
 struct DoesImmediate : public MeasurementPattern<DoesImmediate>{
+  DoesImmediate() : MeasurementPattern<DoesImmediate>(){}
   int createPreamble(){
-    return 0;
+    return 7;
   }
+  int handlePhaseBegin(AttributeId id, int preamble){
+    std::cout << "Preamble provided "<<preamble<<"\n";
+    return 9;
+  }
+  TbdReturnType<Variant> handlePhaseEnd(AttributeId id, int fromBegin){
+    std::cout << "Begin provided "<<fromBegin<<"\n";
+    return TbdReturnType<Variant>();
+  }
+  static void timestamp_register(Caliper* c, Experiment* exp) {
+      DoesImmediate* instance = new DoesImmediate();
+      instance->setInclusiveAttributes({Attribute()});
+      instance->begin_evt_attr = c->get_attribute("cali.event.begin");
+      instance->set_evt_attr   = c->get_attribute("cali.event.set");
+      instance->end_evt_attr   = c->get_attribute("cali.event.end");
+      instance->lvl_attr       = c->get_attribute("cali.event.attr.level");
+      exp->events().snapshot.connect(
+          [instance](Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info, SnapshotRecord* snapshot){
+              instance->snapshot_cb(c, exp, scopes, info, snapshot);
+          });
+ /**     
+      exp->events().post_init_evt.connect(
+          [instance](Caliper* c, Experiment* exp){
+              instance->post_init_cb(c, exp);
+          });
+      exp->events().snapshot.connect(
+          [instance](Caliper* c, Experiment* exp, int scopes, const SnapshotRecord* info, SnapshotRecord* snapshot){
+              instance->snapshot_cb(c, exp, scopes, info, snapshot);
+          });
+      exp->events().finish_evt.connect(
+          [instance](Caliper* c, Experiment* exp){
+              delete instance;
+          });
+
+      Log(1).stream() << exp->name() << ": Registered timestamp service" << endl;
+      */
+    }
 
 };
 
@@ -571,4 +632,10 @@ void instantiator(){
   doz.snapshot_cb(NULL,NULL,0,NULL,NULL);
 }
 
+namespace cali
+{
+
+CaliperService timestamp_service = { "timestamp", ::DoesImmediate::timestamp_register };
+
+} // namespace cali
 
