@@ -339,6 +339,7 @@ namespace cali
 } // namespace cali
 
 
+// TODO: ensure the number of variants returned by different measurement functions matches number of attributes included
 template<typename MeasurementImplementation>
 struct MeasurementPattern {
     
@@ -392,16 +393,18 @@ struct MeasurementPattern {
             size_t expI = exp->id();
 
             StackThing* stack = nullptr;
-            if (exp_stacks.size() < expI)
+            if (exp_stacks.size() > expI)
                 stack = exp_stacks[expI];
 
             if (!stack) {
-                if (exp_stacks.size() <= expI)
+                if (exp_stacks.size() <= expI){
                     exp_stacks.resize(expI + 1);
-                
-                stack = new StackThing;
-
-                exp_stacks[expI] = stack;
+                    stack = new StackThing;
+                    exp_stacks[expI] = stack;
+                }
+                else{
+                  stack = exp_stacks[expI]; // TODO: what if we hit the stacks in non (1,2,3,4,5) order?
+                }
             }
 
             Entry event = info->get(begin_evt_attr);
@@ -423,7 +426,7 @@ struct MeasurementPattern {
                 auto stack_top = stack->back();
                 auto ret = subthis->handlePhaseEnd(spawning_attr_id, stack_top);
                 //sbuf->append(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data());
-                c->make_entrylist(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data(),*sbuf);
+                c->make_entrylist(m_inclusive_attrs.size(), m_inclusive_attrs.data(), ret.data(),*sbuf); 
                 stack->pop_back();
             }
         }
@@ -462,7 +465,7 @@ struct MeasurementPattern {
 
             StackThing* stack = nullptr;
 
-            if (exp_stacks.size() < expI)
+            if (exp_stacks.size() > expI)
                 stack = exp_stacks[expI];
 
             if (!stack) {
@@ -586,19 +589,24 @@ struct MeasurementPattern {
 struct DoesImmediate : public MeasurementPattern<DoesImmediate>{
   DoesImmediate() : MeasurementPattern<DoesImmediate>(){}
   int createPreamble(){
-    return 7;
+    return 4;
   }
   int handlePhaseBegin(AttributeId id, int preamble){
     std::cout << "Preamble provided "<<preamble<<"\n";
-    return 9;
+    return preamble + 1;
   }
   TbdReturnType<Variant> handlePhaseEnd(AttributeId id, int fromBegin){
     std::cout << "Begin provided "<<fromBegin<<"\n";
-    return TbdReturnType<Variant>();
+    return TbdReturnType<Variant>({Variant(fromBegin + 1)});
   }
   static void timestamp_register(Caliper* c, Experiment* exp) {
       DoesImmediate* instance = new DoesImmediate();
-      instance->setInclusiveAttributes({Attribute()});
+        Attribute doggo_attr = 
+            c->create_attribute("DOGGOOOOO", CALI_TYPE_UINT,
+                                CALI_ATTR_ASVALUE     |
+                                CALI_ATTR_SKIP_EVENTS |
+                                CALI_ATTR_SCOPE_THREAD); // FIXME: needs to be original attribute's scope
+      instance->setInclusiveAttributes({doggo_attr});
       instance->begin_evt_attr = c->get_attribute("cali.event.begin");
       instance->set_evt_attr   = c->get_attribute("cali.event.set");
       instance->end_evt_attr   = c->get_attribute("cali.event.end");
