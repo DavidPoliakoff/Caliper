@@ -1,5 +1,5 @@
-set(CALIPER_TIMESTAMP_SOURCES
-    Timestamp.cpp)
+set(CALIPER_SAMPLE_MEASUREMENT_SOURCES
+  SampleMeasurementService.cpp)
 
-add_service_sources(${CALIPER_TIMESTAMP_SOURCES})
-add_caliper_service("timestamp")
+add_service_sources(${CALIPER_SAMPLE_MEASUREMENT_SOURCES})
+add_caliper_service("samplemeasurement")
