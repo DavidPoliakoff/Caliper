@@ -91,7 +91,7 @@ void instantiator(){
 namespace cali
 {
 
-CaliperService timestamp_service = { "timestamp", ::DoesImmediate::make_service };
+CaliperService timestamp_service = { "samplemeasurement", ::DoesImmediate::make_service };
 
 } // namespace cali
 
