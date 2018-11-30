@@ -99,7 +99,7 @@ namespace
 
 
     // --- Exit handler
-
+    
     void
     exit_handler(void) {
         Caliper c = Caliper::instance();
@@ -120,7 +120,9 @@ namespace
         // Don't delete global data, some thread-specific finalization may occur after this point
         // Caliper::release();
     }
-
+    extern "C" void invoke_exit(){
+      exit_handler();
+    }
     // --- Siglock
 
     class siglock {

@@ -38,7 +38,7 @@
 
 #include "Annotation.h"
 #include "cali_definitions.h"
-
+#include "cali.h"
 #include "common/Variant.h"
 
 #include <cstring>
@@ -64,7 +64,7 @@ struct recordValue;
 template<typename T>
 struct recordValue{
 static void record(AnnotationType& annot, T arg){
-annot.set(arg);
+annot.set((int)arg);
 }
 };
 template<>
@@ -99,11 +99,9 @@ struct Nase<Arg, Args...>{
        NextRecorder::record(arg_num + 1, annotations, args...);
     }
 };
-
-void* rip_the_rip(){
-  return __builtin_return_address(0);
-}
-
+#ifndef caliper_unwind_depth
+#define caliper_unwind_depth 0
+#endif
 template<class LB>
 struct TrackedExecutor {
     TrackedExecutor(std::string func_name, LB func, std::vector<std::string> arg_names_in, std::string returned_name_in = "return_value") : func_annot(func_name.c_str()), body(func), returned_annotation((func_name + "#"+returned_name_in).c_str(), CALI_ATTR_SKIP_EVENTS), rip_annot("rip", CALI_ATTR_SKIP_EVENTS){
@@ -129,7 +127,7 @@ struct TrackedExecutor {
         typename std::result_of<LB(Args...)>::type>::type {
       func_annot.begin();
       Nase<Args...>::record(0,argument_annotations,args...);
-      recorder_helper(rip_annot,rip_the_rip());
+      recorder_helper(rip_annot,__builtin_return_address(caliper_unwind_depth));
       auto return_value = body(args...);
       recorder_helper(returned_annotation, return_value);
       func_annot.end();
@@ -143,7 +141,7 @@ struct TrackedExecutor {
         typename std::result_of<LB(Args...)>::type>::type {
       func_annot.begin();
       Nase<Args...>::record(0,argument_annotations,args...);
-      recorder_helper(rip_annot,rip_the_rip());
+      recorder_helper(rip_annot,__builtin_return_address(caliper_unwind_depth));
       func_annot.end();
       close();
 
@@ -157,7 +155,7 @@ struct TrackedExecutor {
 };
 
 template<typename Callable>
-TrackedExecutor<Callable> wrap(std::string name, Callable callee, std::vector<std::string> arg_names, std::string returned_name){
+TrackedExecutor<Callable> wrap(std::string name, Callable callee, std::vector<std::string> arg_names, std::string returned_name = "return_address"){
   return TrackedExecutor<Callable>(name, callee, arg_names, returned_name);
 }
 

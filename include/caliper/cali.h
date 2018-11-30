@@ -68,6 +68,7 @@ extern "C" {
  *   otherwise it will continue.
  */ 
 typedef int (*cali_entry_proc_fn)(void* user_arg, cali_id_t attr_id, cali_variant_t val);
+void * rip_the_rip();
 
 /*
  * --- Attributes ------------------------------------------------------
@@ -77,7 +78,6 @@ typedef int (*cali_entry_proc_fn)(void* user_arg, cali_id_t attr_id, cali_varian
  * \name Attribute management
  * \{
  */
-
 /**
  * \brief Create an attribute
  * \param name Name of the attribute
@@ -570,6 +570,8 @@ cali_is_initialized();
  */
 cali_id_t 
 cali_make_loop_iteration_attribute(const char* name);
+
+void cali_finalize();
 
 #ifdef __cplusplus
 } // extern "C"

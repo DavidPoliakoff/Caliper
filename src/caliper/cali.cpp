@@ -49,7 +49,9 @@
 
 
 using namespace cali;
-
+void* rip_the_rip(){
+    return __builtin_return_address(2);
+}
 //
 // --- Attribute interface
 //
@@ -626,3 +628,7 @@ cali_make_loop_iteration_attribute(const char* name)
 
     return cali_create_attribute(tmp, CALI_TYPE_INT, CALI_ATTR_ASVALUE);
 }
+extern "C" void invoke_exit();
+void cali_finalize(){
+  invoke_exit();
+} 
