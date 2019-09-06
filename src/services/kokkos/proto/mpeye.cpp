@@ -59,6 +59,7 @@ namespace {
     gotcha_wrappee_handle_t mpi_reduce_handle = nullptr;
     gotcha_wrappee_handle_t mpi_allreduce_handle = nullptr;
     gotcha_wrappee_handle_t mpi_wait_handle = nullptr;
+    gotcha_wrappee_handle_t mpi_waitall_handle = nullptr;
     gotcha_wrappee_handle_t cuda_malloc_handle = nullptr;
     gotcha_wrappee_handle_t cuda_malloc_managed_handle = nullptr;
     gotcha_wrappee_handle_t cuda_free_handle = nullptr;
@@ -133,7 +134,13 @@ namespace {
     }
     int MPEyeWait(MPI_Request* req, MPI_Status* stat){
         decltype(&MPEyeWait) wrapped_call = reinterpret_cast<decltype(&MPEyeWait)>(gotcha_get_wrappee(mpi_wait_handle));
-        return wrapped_call(req,stat);
+        int status =  wrapped_call(req,stat);
+         
+        return status;
+    }
+    int MPEyeWaitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]){
+        decltype(&MPEyeWaitall) wrapped_call = reinterpret_cast<decltype(&MPEyeWaitall)>(gotcha_get_wrappee(mpi_waitall_handle));
+        return wrapped_call(count, array_of_requests, array_of_statuses);
     }
     class MPEye {
         static bool is_wrapped;
@@ -165,6 +172,7 @@ namespace {
                {"MPI_Reduce", (void*) MPEyeReduce, &mpi_reduce_handle},
                {"MPI_Allreduce", (void*) MPEyeAllReduce, &mpi_allreduce_handle},
                {"MPI_Wait", (void*) MPEyeWait, &mpi_wait_handle},
+               {"MPI_Waitall", (void*) MPEyeWaitall, &mpi_waitall_handle},
                {"cudaMalloc", (void*) cudaMallocWrapper, &cuda_malloc_handle},
                {"cudaMallocManaged", (void*) cudaMallocManagedWrapper, &cuda_malloc_managed_handle},
                {"cudaFree", (void*) cudaFreeWrapper, &cuda_free_handle}
