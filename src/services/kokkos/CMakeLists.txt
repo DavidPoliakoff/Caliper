@@ -4,7 +4,7 @@ set(CALIPER_KOKKOS_SOURCES
   KokkosTime.cpp
   proto/mpeye.cpp
 )
-set(KOKKOS_ENABLE_CUDA ON)
+set(Kokkos_ENABLE_CUDA ON)
 add_subdirectory(embedded_kokkos)
 include_directories(${gotcha_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/embedded_kokkos)

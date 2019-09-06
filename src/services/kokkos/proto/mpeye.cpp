@@ -53,7 +53,12 @@
 using namespace cali;
 namespace {
     std::map<void*, size_t> allocation_size_tracker;
+    std::map<MPI_Request*, void*> request_tracker;
     gotcha_wrappee_handle_t mpi_send_handle = nullptr;
+    gotcha_wrappee_handle_t mpi_isend_handle = nullptr;
+    gotcha_wrappee_handle_t mpi_reduce_handle = nullptr;
+    gotcha_wrappee_handle_t mpi_allreduce_handle = nullptr;
+    gotcha_wrappee_handle_t mpi_wait_handle = nullptr;
     gotcha_wrappee_handle_t cuda_malloc_handle = nullptr;
     gotcha_wrappee_handle_t cuda_malloc_managed_handle = nullptr;
     gotcha_wrappee_handle_t cuda_free_handle = nullptr;
@@ -77,21 +82,58 @@ namespace {
         allocation_size_tracker[*buf] = size;
         return error;
     }
-    int MPEyeSend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) {
-        const void* final_buf = buf;
-        decltype(&MPEyeSend) wrapped_call = reinterpret_cast<decltype(&MPEyeSend)>(gotcha_get_wrappee(mpi_send_handle));
+    template<typename transform>
+    auto with_host_buffer(const void* buf, transform trans) -> decltype(trans(buf)){
         cudaPointerAttributes attrs;
         cudaPointerGetAttributes(&attrs, buf);
+        Kokkos::View<char*,Kokkos::CudaSpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> uvm_view((char*)buf,allocation_size_tracker[
+           const_cast<void*>(buf)
+        ]);
         if(attrs.isManaged) {
-            Kokkos::View<char*,Kokkos::CudaSpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> uvm_view((char*)buf,allocation_size_tracker[
-               const_cast<void*>(buf)
-            ]);
             auto host_view = Kokkos::create_mirror_view(uvm_view);
             Kokkos::deep_copy(host_view, uvm_view);
-            final_buf = host_view.data();
+            const void* final_buf = host_view.data();
+            return trans(final_buf);
         }
-        return wrapped_call(final_buf,count,datatype,dest,tag,comm);
+        else{
+            return trans(buf);
+        }
         
+    }
+    int MPEyeSend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) {
+        decltype(&MPEyeSend) wrapped_call = reinterpret_cast<decltype(&MPEyeSend)>(gotcha_get_wrappee(mpi_send_handle));
+        return with_host_buffer(buf, [&](const void* host_buf){
+           return wrapped_call(host_buf, count, datatype, dest, tag, comm);
+        });
+        
+    }
+    int MPEyeISend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm ,MPI_Request* request){
+        decltype(&MPEyeISend) wrapped_call = reinterpret_cast<decltype(&MPEyeISend)>(gotcha_get_wrappee(mpi_isend_handle));
+        return with_host_buffer(buf, [&](const  void* host_buf) {
+           int return_code = wrapped_call(host_buf, count, datatype, dest, tag, comm, request);
+           request_tracker[request] = const_cast<void*>(host_buf); 
+           return return_code;
+        });
+    }
+    int MPEyeReduce(const void* sendbuf, const void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm){
+        decltype(&MPEyeReduce) wrapped_call = reinterpret_cast<decltype(&MPEyeReduce)>(gotcha_get_wrappee(mpi_reduce_handle));
+        return with_host_buffer(sendbuf, [&](const void* hostsendbuf) {
+          return with_host_buffer(recvbuf, [&](const void* hostrecvbuf) {
+            return wrapped_call(hostsendbuf, hostrecvbuf, count, datatype, op, root, comm); 
+          }); 
+        }); 
+    }
+    int MPEyeAllReduce(const void* sendbuf, const void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm){
+        decltype(&MPEyeAllReduce) wrapped_call = reinterpret_cast<decltype(&MPEyeAllReduce)>(gotcha_get_wrappee(mpi_allreduce_handle));
+        return with_host_buffer(sendbuf, [&](const void* hostsendbuf) {
+          return with_host_buffer(recvbuf, [&](const void* hostrecvbuf) {
+            return wrapped_call(hostsendbuf, hostrecvbuf, count, datatype, op, comm); 
+          }); 
+        }); 
+    }
+    int MPEyeWait(MPI_Request* req, MPI_Status* stat){
+        decltype(&MPEyeWait) wrapped_call = reinterpret_cast<decltype(&MPEyeWait)>(gotcha_get_wrappee(mpi_wait_handle));
+        return wrapped_call(req,stat);
     }
     class MPEye {
         static bool is_wrapped;
@@ -119,6 +161,10 @@ namespace {
             if(!is_wrapped){
             struct gotcha_binding_t mpeye_bindings[] = {
                {"MPI_Send", (void*) MPEyeSend, &mpi_send_handle},
+               {"MPI_Isend", (void*) MPEyeISend, &mpi_isend_handle},
+               {"MPI_Reduce", (void*) MPEyeReduce, &mpi_reduce_handle},
+               {"MPI_Allreduce", (void*) MPEyeAllReduce, &mpi_allreduce_handle},
+               {"MPI_Wait", (void*) MPEyeWait, &mpi_wait_handle},
                {"cudaMalloc", (void*) cudaMallocWrapper, &cuda_malloc_handle},
                {"cudaMallocManaged", (void*) cudaMallocManagedWrapper, &cuda_malloc_managed_handle},
                {"cudaFree", (void*) cudaFreeWrapper, &cuda_free_handle}
