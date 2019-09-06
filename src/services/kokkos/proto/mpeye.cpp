@@ -78,6 +78,7 @@ namespace {
         return error;
     }
     int MPEyeSend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) {
+        const void* final_buf = buf;
         decltype(&MPEyeSend) wrapped_call = reinterpret_cast<decltype(&MPEyeSend)>(gotcha_get_wrappee(mpi_send_handle));
         cudaPointerAttributes attrs;
         cudaPointerGetAttributes(&attrs, buf);
@@ -87,8 +88,9 @@ namespace {
             ]);
             auto host_view = Kokkos::create_mirror_view(uvm_view);
             Kokkos::deep_copy(host_view, uvm_view);
+            final_buf = host_view.data();
         }
-        return wrapped_call(buf,count,datatype,dest,tag,comm);
+        return wrapped_call(final_buf,count,datatype,dest,tag,comm);
         
     }
     class MPEye {
