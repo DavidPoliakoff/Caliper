@@ -52,10 +52,10 @@ extern "C" void kokkosp_pop_profile_region() {
     kokkosp_callbacks.kokkosp_pop_region_callback();
 }
 extern "C" void kokkosp_allocate_data(const SpaceHandle space, const char* label, const void* const ptr, const uint64_t size) {
-    kokkosp_callbacks.kokkosp_allocate_callback(space,label,ptr,size);
+    kokkosp_callbacks.kokkosp_allocate_callback(space,label,ptr,size+128);
 }
 extern "C" void kokkosp_deallocate_data(const SpaceHandle space, const char* label, const void* const ptr, const uint64_t size) {
-    kokkosp_callbacks.kokkosp_deallocate_callback(space,label,ptr,size);
+    kokkosp_callbacks.kokkosp_deallocate_callback(space,label,ptr,size+128);
 }
 
 extern "C" void kokkosp_begin_deep_copy(const SpaceHandle dst_handle, const char* dst_name, const void* dst_ptr,
